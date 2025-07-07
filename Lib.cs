@@ -61,7 +61,7 @@ public static partial class Module
     [Reducer(ReducerKind.ClientDisconnected)]
     public static void PlayerDisconnected(ReducerContext ctx)
     {
-        
+
         var player = ctx.Db.Player.identity.Find(ctx.Sender);
 
 
@@ -73,4 +73,21 @@ public static partial class Module
         }
 
     }
+
+
+    [Reducer]
+    public static void PlayerChangedName(ReducerContext ctx, string NewName)
+    {
+        
+            var player = ctx.Db.Player.identity.Find(ctx.Sender);
+
+
+        if (player is not null) // this means the player actually exists
+        {
+            player.UserName = NewName; // make the player online
+            ctx.Db.Player.identity.Update(player);
+
+        }
+    }
+
 }
