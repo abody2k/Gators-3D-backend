@@ -15,10 +15,10 @@ public static partial class Module
         public byte PlayersInRoom;
         public bool GameStarted = false;
         public Identity? CurrentPlayerTurn;
-        public Player[] Players = {};
+        public Player[] Players = { };
         public int TimeLeft;
         public byte ActionsRemained;
-        public byte[] votes = {};
+        public byte[] votes = { };
 
 
     }
@@ -35,29 +35,12 @@ public static partial class Module
         public int[] Location = [0, 0, 0];
         public byte Rotation; // reflects the number by 90 degress basically Rotation * 90 
 
-        public override bool Equals(object? obj)
+
+
+        public bool IsSame(Player player)
         {
-            //
-            // See the full list of guidelines at
-            //   http://go.microsoft.com/fwlink/?LinkID=85237
-            // and also the guidance for operator== at
-            //   http://go.microsoft.com/fwlink/?LinkId=85238
-            //
+            return this.identity == player?.identity;
 
-            if (obj == null || GetType() != obj.GetType())
-            {
-                return false;
-            }
-
-            // TODO: write your implementation of Equals() here
-            return this.identity == (obj as Player)?.identity;
-        }
-
-        // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            // TODO: write your implementation of GetHashCode() here
-            return base.GetHashCode();
         }
 
 
@@ -184,7 +167,7 @@ public static partial class Module
             //check if it's the current player turn
 
             //check if the player has more actions to do
-            if (room.CurrentPlayerTurn == player.identity && room.ActionsRemained > 0 && room.Players.Contains(player))
+            if (room.CurrentPlayerTurn == player.identity && room.ActionsRemained > 0 && room.Players.Any(p => p.identity == player.identity))
             {
                 // reduce the actions that remains
                 room.ActionsRemained--;
@@ -215,7 +198,7 @@ public static partial class Module
                         if (attackedPlayer is not null) // it's not an empty block, there is a player over there
                         {
                             attackedPlayer.HP -= 10; // the damage can be updated in the future 
-                            room.Players[Array.IndexOf(room.Players, attackedPlayer)] = attackedPlayer;
+                            room.Players[PlayerIndex(room.Players, attackedPlayer)] = attackedPlayer;
                         }
                         //if so then inflict damage on that player
 
@@ -228,14 +211,14 @@ public static partial class Module
                 if (room.ActionsRemained == 0) // player used all their actions
                 {
 
-                    var index = Array.IndexOf(room.Players, player) + 2;
+                    var index = PlayerIndex(room.Players, player) + 1;
                     index = index >= room.Players.Length ? 0 : index;
                     room.CurrentPlayerTurn = room.Players[index].identity; // change the current turn to the next player
                     room.ActionsRemained = 3; // reset the number of actions
                 }
 
                 //update the player that got hit
-                room.Players[Array.IndexOf(room.Players, player)] = player;
+                room.Players[PlayerIndex(room.Players, player)] = player;
                 ctx.Db.Player.identity.Update(player);
                 ctx.Db.Room.RoomID.Update(room);
 
@@ -322,14 +305,15 @@ public static partial class Module
         if (room is not null && player is not null) // do they all exist ?
         {
 
-            if (room.Players.Contains(player)) // is this player part of this room ?
+            if (room.Players.Any(p => p.identity == player.identity)) // is this player part of this room ?
             {
 
-                if (!room.votes.Contains((byte)Array.IndexOf(room.Players, player)))
+                if (!room.votes.Contains((byte)PlayerIndex(room.Players, player)))
                 {
+
                     var newVotes = new byte[room.votes.Length + 1];
                     Array.Copy(room.votes, newVotes, room.votes.Length);
-                    newVotes[^1] = (byte)Array.IndexOf(room.Players, player);
+                    newVotes[^1] = (byte)PlayerIndex(room.Players, player);
                     room.votes = newVotes;
                     if (room.votes.Length == room.Players.Length && room.Players.Length > 1) // the number of votes are equal to the number of players
                     {
@@ -341,6 +325,23 @@ public static partial class Module
                 }
             }
         }
+    }
+
+
+    private static int PlayerIndex(Player[] players, Player player)
+    {
+
+        int pos = -1;
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (player.identity == players[i].identity)
+            {
+                pos = i;
+                break;
+            }
+        }
+
+        return pos;
 }
 
 }
