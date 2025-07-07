@@ -4,6 +4,7 @@ public static partial class Module
 {
 
 
+
     [Table(Name = "Room", Public = true)]
     public partial class Room
     {
@@ -28,10 +29,36 @@ public static partial class Module
         public Identity identity;
         public string? UserName;
         public bool Online;
-        public int HP;
+        public int HP = 100;
 
         public int[] Location = [0, 0, 0];
         public byte Rotation; // reflects the number by 90 degress basically Rotation * 90 
+
+        public override bool Equals(object? obj)
+        {
+            //
+            // See the full list of guidelines at
+            //   http://go.microsoft.com/fwlink/?LinkID=85237
+            // and also the guidance for operator== at
+            //   http://go.microsoft.com/fwlink/?LinkId=85238
+            //
+            
+            if (obj == null || GetType() != obj.GetType())
+            {
+                return false;
+            }
+            
+            // TODO: write your implementation of Equals() here
+            return this.identity == (obj as Player)?.identity;
+        }
+        
+        // override object.GetHashCode
+        public override int GetHashCode()
+        {
+            // TODO: write your implementation of GetHashCode() here
+            return base.GetHashCode();
+        }
+
 
     }
 
@@ -152,10 +179,11 @@ public static partial class Module
             //check if it's the current player turn
 
             //check if the player has more actions to do
-            if (room.CurrentPlayerTurn == player.identity && room.ActionsRemained > 0)
+            if (room.CurrentPlayerTurn == player.identity && room.ActionsRemained > 0 && room.Players.Contains(player))
             {
                 // reduce the actions that remains
                 room.ActionsRemained--;
+
 
 
                 switch (action)
@@ -172,7 +200,7 @@ public static partial class Module
                         break;
                     case 1: // rotate
 
-                        player.Rotation += (byte)direction[0];
+                        player.Rotation += (byte)Math.Clamp(direction[0], -1, 1);
                         player.Rotation %= 4;
                         break;
                     case 2: // attack
@@ -181,15 +209,30 @@ public static partial class Module
                         var attackedPlayer = GetPlayerInThisLocation(player.Location, player.Rotation, room.Players);
                         if (attackedPlayer is not null) // it's not an empty block, there is a player over there
                         {
-                            
+                            attackedPlayer.HP -= 10; // the damage can be updated in the future 
+                            room.Players[Array.IndexOf(room.Players, attackedPlayer)] = attackedPlayer;
                         }
-                            //if so then inflict damage on that player
+                        //if so then inflict damage on that player
 
 
                         break;
                     case 3: // do nothing
                         break;
                 }
+
+                if (room.ActionsRemained == 0) // player used all their actions
+                {
+
+                    var index = Array.IndexOf(room.Players, player) + 2;
+                    index = index >= room.Players.Length ? 0 : index;
+                    room.CurrentPlayerTurn = room.Players[index].identity; // change the current turn to the next player
+                    room.ActionsRemained = 3; // reset the number of actions
+                }
+
+                //update the player that got hit
+                room.Players[Array.IndexOf(room.Players, player)] = player;
+                ctx.Db.Player.identity.Update(player);
+                ctx.Db.Room.RoomID.Update(room);
 
                 //
 
@@ -226,7 +269,8 @@ public static partial class Module
     }
 
 
-    private static int[] Location(byte rotation, int[] location)
+    private static int[] Location(byte rotation, int[] location)// this function should reflects a specific gun but right now
+    // the normal behavior is for a rifle
     {
 
         switch (Math.Abs(rotation))
