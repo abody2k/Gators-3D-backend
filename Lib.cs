@@ -15,9 +15,10 @@ public static partial class Module
         public byte PlayersInRoom;
         public bool GameStarted = false;
         public Identity? CurrentPlayerTurn;
-        public Player[] Players = [];
+        public Player[] Players = {};
         public int TimeLeft;
         public byte ActionsRemained;
+        public byte[] votes = {};
 
 
     }
@@ -309,6 +310,37 @@ public static partial class Module
         {
 
         });
+    }
+
+
+    [Reducer]
+    public static void VoteGameStart(ReducerContext ctx, int roomID)
+    {
+        var room = RoomExist(roomID, ctx);
+        var player = PlayerExist(ctx);
+
+        if (room is not null && player is not null) // do they all exist ?
+        {
+
+            if (room.Players.Contains(player)) // is this player part of this room ?
+            {
+
+                if (!room.votes.Contains((byte)Array.IndexOf(room.Players, player)))
+                {
+                    var newVotes = new byte[room.votes.Length + 1];
+                    Array.Copy(room.votes, newVotes, room.votes.Length);
+                    newVotes[^1] = (byte)Array.IndexOf(room.Players, player);
+                    room.votes = newVotes;
+                    if (room.votes.Length == room.Players.Length && room.Players.Length > 1) // the number of votes are equal to the number of players
+                    {
+                        room.GameStarted = true;
+
+                    }
+                    ctx.Db.Room.RoomID.Update(room);
+
+                }
+            }
+        }
 }
 
 }
