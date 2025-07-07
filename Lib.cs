@@ -14,6 +14,7 @@ public static partial class Module
         public uint PlayersInRoom;
         public bool GameStarted;
         public Identity CurrentPlayerTurn;
+        public Identity[] Players = [];
         public int TimeLeft;
 
 
@@ -78,8 +79,8 @@ public static partial class Module
     [Reducer]
     public static void PlayerChangedName(ReducerContext ctx, string NewName)
     {
-        
-            var player = ctx.Db.Player.identity.Find(ctx.Sender);
+
+        var player = ctx.Db.Player.identity.Find(ctx.Sender);
 
 
         if (player is not null) // this means the player actually exists
@@ -90,4 +91,46 @@ public static partial class Module
         }
     }
 
+
+    [Reducer]
+    public static void JoinRoom(ReducerContext ctx,int roomID)
+    {
+        
+        var player = ctx.Db.Player.identity.Find(ctx.Sender);
+        var room = ctx.Db.Room.RoomID.Find(roomID);
+
+        if (player is not null && room is not null) // this means the player actually exists and there is such a room
+        {
+            if (room.GameStarted)
+            {
+                // no one can join
+                return;
+            }
+            else
+            {
+                var newRoom = new Identity[room.Players.Length + 1];
+                for (int i = 0; i < newRoom.Length - 1; i++)
+                {
+                    newRoom[i] = room.Players[i];
+                }
+                newRoom[^1] = ctx.Sender;
+
+                room.Players = newRoom;
+
+                //start the game when there are 4 players
+
+                if (newRoom.Length == 4)
+                {
+                    room.GameStarted = true;
+                }
+
+                ctx.Db.Room.RoomID.Update(room);
+
+                
+                
+            }
+
+        }
+
+    }
 }
