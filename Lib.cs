@@ -13,8 +13,8 @@ public static partial class Module
         [AutoInc]
         public int RoomID;
         public byte PlayersInRoom;
-        public bool GameStarted;
-        public Identity CurrentPlayerTurn;
+        public bool GameStarted = false;
+        public Identity? CurrentPlayerTurn;
         public Player[] Players = [];
         public int TimeLeft;
         public byte ActionsRemained;
@@ -42,16 +42,16 @@ public static partial class Module
             // and also the guidance for operator== at
             //   http://go.microsoft.com/fwlink/?LinkId=85238
             //
-            
+
             if (obj == null || GetType() != obj.GetType())
             {
                 return false;
             }
-            
+
             // TODO: write your implementation of Equals() here
             return this.identity == (obj as Player)?.identity;
         }
-        
+
         // override object.GetHashCode
         public override int GetHashCode()
         {
@@ -152,6 +152,10 @@ public static partial class Module
                 if (newRoom.Length == 4)
                 {
                     room.GameStarted = true;
+                }
+                else if (newRoom.Length == 1)
+                {
+                    room.CurrentPlayerTurn = player.identity;
                 }
 
                 ctx.Db.Room.RoomID.Update(room);
@@ -264,8 +268,8 @@ public static partial class Module
     private static Player? GetPlayerInThisLocation(int[] location, byte rotation, Player[] players)
     {
 
-        return  players.First(p => p.Location == Location(rotation, location));
-        
+        return players.First(p => p.Location == Location(rotation, location));
+
     }
 
 
@@ -292,7 +296,19 @@ public static partial class Module
 
         return location;
     }
-    
 
+
+
+
+    [Reducer]
+    public static void CreateRoom(ReducerContext ctx)
+    {
+
+
+        ctx.Db.Room.Insert(new Room
+        {
+
+        });
+}
 
 }
