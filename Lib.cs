@@ -33,4 +33,44 @@ public static partial class Module
 
     }
 
+
+    [Reducer(ReducerKind.ClientConnected)]
+    public static void PlayerConnected(ReducerContext ctx)
+    {
+
+
+        var player = ctx.Db.Player.identity.Find(ctx.Sender);
+
+
+        if (player is not null) // this means the player actually exists
+        {
+            player.Online = true; // make the player online
+            ctx.Db.Player.identity.Update(player);
+
+        }
+        else
+        {
+            ctx.Db.Player.Insert(new Player
+            {
+                identity = ctx.Identity
+
+            });
+        }
+    }
+
+    [Reducer(ReducerKind.ClientDisconnected)]
+    public static void PlayerDisconnected(ReducerContext ctx)
+    {
+        
+        var player = ctx.Db.Player.identity.Find(ctx.Sender);
+
+
+        if (player is not null) // this means the player actually exists
+        {
+            player.Online = false; // make the player goes offline
+            ctx.Db.Player.identity.Update(player);
+
+        }
+
+    }
 }
