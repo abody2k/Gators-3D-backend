@@ -14,9 +14,9 @@ public static partial class Module
         public byte PlayersInRoom;
         public bool GameStarted;
         public Identity CurrentPlayerTurn;
-        public Identity[] Players = [];
+        public Player[] Players = [];
         public int TimeLeft;
-       public byte ActionsRemained;
+        public byte ActionsRemained;
 
 
     }
@@ -111,12 +111,12 @@ public static partial class Module
             }
             else
             {
-                var newRoom = new Identity[room.Players.Length + 1];
+                var newRoom = new Player[room.Players.Length + 1];
                 for (int i = 0; i < newRoom.Length - 1; i++)
                 {
                     newRoom[i] = room.Players[i];
                 }
-                newRoom[^1] = ctx.Sender;
+                newRoom[^1] = player;
 
                 room.Players = newRoom;
 
@@ -138,8 +138,8 @@ public static partial class Module
     }
 
 
-    [Reducer] 
-    public static void MoveRotateAttack(ReducerContext ctx, int roomID, byte action,  int[] direction)
+    [Reducer]
+    public static void MoveRotateAttack(ReducerContext ctx, int roomID, byte action, int[] direction)
     {
 
 
@@ -162,8 +162,8 @@ public static partial class Module
                 {
 
                     case 0: // move in the given direction
-                     var newPosition = new int[3];
-                    for (int i = 0; i < 3; i++)
+                        var newPosition = new int[3];
+                        for (int i = 0; i < 3; i++)
                         {
                             newPosition[i] = player.Location[i] + Math.Clamp(direction[i], -1, 1);
                         }
@@ -172,14 +172,20 @@ public static partial class Module
                         break;
                     case 1: // rotate
 
-                    player.Rotation +=(byte) direction[0];
-                    player.Rotation %= 4;
+                        player.Rotation += (byte)direction[0];
+                        player.Rotation %= 4;
                         break;
                     case 2: // attack
                             //check all the players and see if any of them exists in that place
+
+                        var attackedPlayer = GetPlayerInThisLocation(player.Location, player.Rotation, room.Players);
+                        if (attackedPlayer is not null) // it's not an empty block, there is a player over there
+                        {
+                            
+                        }
                             //if so then inflict damage on that player
-                    
-                    
+
+
                         break;
                     case 3: // do nothing
                         break;
@@ -202,14 +208,45 @@ public static partial class Module
     {
 
 
-        return context.Db.Room.RoomID.Find(roomID) ;
+        return context.Db.Room.RoomID.Find(roomID);
     }
 
-    private static Player? PlayerExist( ReducerContext context)
+    private static Player? PlayerExist(ReducerContext context)
     {
 
 
-        return context.Db.Player.identity.Find(context.Sender) ;
+        return context.Db.Player.identity.Find(context.Sender);
+    }
+
+    private static Player? GetPlayerInThisLocation(int[] location, byte rotation, Player[] players)
+    {
+
+        return  players.First(p => p.Location == Location(rotation, location));
+        
+    }
+
+
+    private static int[] Location(byte rotation, int[] location)
+    {
+
+        switch (Math.Abs(rotation))
+        {
+
+            case 0:
+                location[1] += 1;
+                break;
+            case 1:
+                location[0] += 1;
+                break;
+            case 2:
+                location[1] -= 1;
+                break;
+            case 3:
+                location[0] -= 1;
+                break;
+        }
+
+        return location;
     }
     
 
